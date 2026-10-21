@@ -1,6 +1,6 @@
 # Colchian Dragon
 
-Colchian Dragon is a macOS menu bar app that keeps your MacBook awake with the lid closed, so you can close the laptop without interrupting a running [Claude Code](https://claude.com/claude-code) session or other running tasks.
+Colchian Dragon is a macOS menu bar app that lets your keep your MacBook laptop from going to sleep when the lid is closed, so your [Claude Code](https://claude.com/claude-code) session or other running tasks can keep working.
 
 Created by Dan Romik ([danromik.com](https://danromik.com)) as [free and open source software](LICENSE).
 
