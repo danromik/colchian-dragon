@@ -5,3 +5,7 @@ build/
 xcuserdata/
 .DS_Store
 Archive/
+
+# Screenshots and screen recordings saved while working (not README images)
+assets/Screenshot*
+assets/Screen Recording*
