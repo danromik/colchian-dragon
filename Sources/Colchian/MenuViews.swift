@@ -105,13 +105,17 @@ class MenuItemView: NSView {
 }
 
 /// The top of the menu: the app name above two status tiles, for how hot the Mac is running and for
-/// Claude Code activity. Either tile, or both, can be turned off in Settings.
+/// Claude Code sessions. Either tile, or both, can be turned off in Settings. The Claude Code activity
+/// box below them is a menu item of its own (`ActivityBoxView`).
 final class DashboardView: MenuItemView {
     /// Which tiles are shown.
     struct Tiles: Equatable {
         var thermal = true
         var claude = true
-        var any: Bool { thermal || claude }
+        /// The Claude Code activity box, under the other two.
+        var activity = true
+        /// Whether the row of status tiles is shown.
+        var statusRow: Bool { thermal || claude }
     }
 
     struct Status: Equatable {
@@ -133,7 +137,7 @@ final class DashboardView: MenuItemView {
     }
 
     /// The height for `tiles`: with none, only the app name is shown.
-    static func height(for tiles: Tiles) -> CGFloat { tiles.any ? 82 : 30 }
+    static func height(for tiles: Tiles) -> CGFloat { tiles.statusRow ? 82 : 30 }
 
     init() {
         super.init(height: Self.height(for: Tiles()))

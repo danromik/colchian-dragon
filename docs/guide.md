@@ -12,6 +12,9 @@ Clicking the menu bar icon opens a menu with:
 
 - **A status dashboard:** how many Claude Code sessions are open and how many are active,
   and the thermal state with the CPU, battery and SSD temperatures. Either box can be hidden under **Dashboard** in Settings.
+- **Claude Code activity:** a live picture of the last 30 minutes of your Claude Code sessions and
+  the agents they started (see [Claude Code activity](#claude-code-activity)). Hover over it to open a
+  detailed panel beside the menu.
 - **The three modes:**
   - **No override:** the Mac sleeps when the lid closes.
   - **Stay Awake (Always):** lid-close sleep is disabled.
@@ -99,6 +102,28 @@ defaults write com.danromik.colchian-dragon staleTurnMinutes -int 60
 Claude Code reloads its settings files while it runs, so sessions that are already running pick
 up hook changes without a restart. A session that is already active when you turn hooks on is
 tracked from its next tool call on.
+
+### Claude Code activity
+
+The activity box under the dashboard shows each Claude Code session of the last 30 minutes, the
+subagents and workflow agents it started, and how many tokens they produced over time. Hovering over
+the box opens a panel with more detail: each session's name and model, the agents running now and
+recently, token rates and totals, and the cache hit rate.
+
+There are three styles, chosen under **Dashboard** in Settings, where the box can also be hidden:
+
+- **Dragon Eye** (the default): a radial heat map swept like a radar, one turn per 30 minutes. Each
+  session is a ring, its subagents are arcs just outside it, and the pupil widens as more agents work.
+- **Dragon Scales:** a honeycomb heat map. Each session is a band of rows that thickens while its
+  subagents run.
+- **Activity Stream:** each session is a stream as wide as its token rate. Subagents branch off it
+  and rejoin it, with a strip of squares below for each session.
+
+The activity is read from Claude Code's own files in each config directory, so it needs no hooks:
+`sessions/` for the open sessions, and the transcripts in `projects/` (with each session's
+`subagents/` folder) for the history. Colchian Dragon reads only timestamps, model names and token
+counts from them, never the content. It reads once a second while the menu or the Settings
+preview shows the box, and once a minute otherwise.
 
 ### Overheating protection
 

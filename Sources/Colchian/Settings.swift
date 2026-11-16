@@ -31,6 +31,8 @@ final class Settings {
         static let staleTurnMinutes = "staleTurnMinutes"
         static let showThermalStatus = "showThermalStatus"
         static let showClaudeStatus = "showClaudeStatus"
+        static let showClaudeActivity = "showClaudeActivity"
+        static let activityStyle = "activityStyle"
     }
 
     private init() {
@@ -41,6 +43,8 @@ final class Settings {
             Key.staleTurnMinutes: 30,
             Key.showThermalStatus: true,
             Key.showClaudeStatus: true,
+            Key.showClaudeActivity: true,
+            Key.activityStyle: ActivityStyle.dragonEye.rawValue,
         ])
         // Earlier versions could save this from Settings; now only the launch argument sets it.
         defaults.removeObject(forKey: Key.showDockIcon)
@@ -64,11 +68,19 @@ final class Settings {
     /// Which status boxes the menu's dashboard shows.
     var dashboardTiles: DashboardView.Tiles {
         get { DashboardView.Tiles(thermal: defaults.bool(forKey: Key.showThermalStatus),
-                                  claude: defaults.bool(forKey: Key.showClaudeStatus)) }
+                                  claude: defaults.bool(forKey: Key.showClaudeStatus),
+                                  activity: defaults.bool(forKey: Key.showClaudeActivity)) }
         set {
             defaults.set(newValue.thermal, forKey: Key.showThermalStatus)
             defaults.set(newValue.claude, forKey: Key.showClaudeStatus)
+            defaults.set(newValue.activity, forKey: Key.showClaudeActivity)
         }
+    }
+
+    /// The look of the Claude Code activity box.
+    var activityStyle: ActivityStyle {
+        get { ActivityStyle(rawValue: defaults.string(forKey: Key.activityStyle) ?? "") ?? .dragonEye }
+        set { defaults.set(newValue.rawValue, forKey: Key.activityStyle) }
     }
 
     /// A turn with no hook activity for this long is assumed to have ended without a Stop hook

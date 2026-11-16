@@ -19,6 +19,8 @@ Choose one of three modes from the menu bar:
 
 If the Mac gets too hot, Colchian Dragon lets it sleep until it cools down.
 
+The menu also shows a live picture of your Claude Code sessions and the agents they start.
+
 Requires macOS 13 or later.
 
 ## Installation and setup

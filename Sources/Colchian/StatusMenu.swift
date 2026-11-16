@@ -1,7 +1,7 @@
 import AppKit
 
-/// The menu bar item: the selected mode's icon, and a menu with a status dashboard,
-/// the three modes, and Quit/Settings.
+/// The menu bar item: the selected mode's icon, and a menu with a status dashboard, the Claude Code
+/// activity box, the three modes, and Quit/Settings.
 final class StatusMenu: NSObject, NSMenuDelegate {
     static let width: CGFloat = 330
 
@@ -9,6 +9,11 @@ final class StatusMenu: NSObject, NSMenuDelegate {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let menu = NSMenu()
     private let dashboard = DashboardView()
+    private let activityBox: ActivityBoxView
+    private let activityItem = NSMenuItem()
+    private let activityPanel = ActivityPanelController()
+    /// Whether the menu is open with the activity box showing, holding the activity monitor running.
+    private var readingActivity = false
     private let notice = NoticeRowView()
     private let noticeItem = NSMenuItem()
     private let modeHeader = SectionHeaderView(title: "Sleep Override Mode", hasHelp: true)
@@ -27,11 +32,16 @@ final class StatusMenu: NSObject, NSMenuDelegate {
 
     init(app: AppDelegate) {
         self.app = app
+        activityBox = ActivityBoxView(style: app.settings.activityStyle)
         super.init()
         menu.delegate = self
         menu.autoenablesItems = false
 
         menu.addItem(viewItem(dashboard, title: "Colchian Dragon", enabled: false))
+        activityItem.view = activityBox
+        activityItem.title = "Claude Code Activity"
+        activityItem.isEnabled = false
+        menu.addItem(activityItem)
         notice.onClick = { [unowned app] in app.showSettings() }
         noticeItem.view = notice
         menu.addItem(noticeItem)
@@ -62,11 +72,12 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         settingsItem.allowsKeyEquivalentWhenHidden = true
         menu.addItem(settingsItem)
 
-        animator.views = [dashboard, notice, modeHeader] + modeRows + [footer, about]
+        animator.views = [dashboard, activityBox, notice, modeHeader] + modeRows + [footer, about]
         animator.onFrame = { [unowned self] now in
             if now - lastReading >= 2 { takeReadings(now: now) }
             modeGuide.update(button: modeHeader.helpHovered ? modeHeader.helpScreenRect : nil, now: now)
             modeHeader.helpShown = modeGuide.isShown
+            if !activityItem.isHidden { activityPanel.update(box: activityBox, now: now) }
             let tooltip = animator.views.lazy.compactMap { view in view.mouseLocation.flatMap(view.tooltip(at:)) }.first
             tooltips.update(tooltip, now: now)
         }
@@ -83,6 +94,8 @@ final class StatusMenu: NSObject, NSMenuDelegate {
     func update() {
         let mode = app.settings.mode
         dashboard.tiles = app.settings.dashboardTiles
+        activityItem.isHidden = !dashboard.tiles.activity
+        activityBox.setStyle(app.settings.activityStyle)
         dashboard.status = DashboardView.Status(mode: mode, overheated: app.overheated, hooksInstalled: app.hooksInstalled,
                                                 activeTurns: app.turns.activeSessions.count, openSessions: openSessions,
                                                 thermalState: app.thermal.state, thermalLimit: app.settings.thermalLimit,
@@ -145,12 +158,21 @@ final class StatusMenu: NSObject, NSMenuDelegate {
 
     func menuWillOpen(_ menu: NSMenu) {
         takeReadings(now: CACurrentMediaTime())
+        if !activityItem.isHidden, !readingActivity {
+            readingActivity = true
+            ClaudeActivityMonitor.shared.retain()
+        }
         animator.start()
     }
 
     func menuDidClose(_ menu: NSMenu) {
         animator.stop()
         modeGuide.hide()
+        activityPanel.hide()
+        if readingActivity {
+            readingActivity = false
+            ClaudeActivityMonitor.shared.release()
+        }
         footer.aboutOpen = false
         tooltips.hide()
     }

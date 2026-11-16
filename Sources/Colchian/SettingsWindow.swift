@@ -16,6 +16,7 @@ final class SettingsModel: ObservableObject {
     @Published private(set) var passwordlessInstalled = false
     @Published private(set) var launchesAtLogin = false
     @Published private(set) var dashboardTiles = DashboardView.Tiles()
+    @Published private(set) var activityStyle = ActivityStyle.dragonEye
     @Published private(set) var dashboardStatus = DashboardView.Status()
 
     private weak var app: AppDelegate?
@@ -34,6 +35,7 @@ final class SettingsModel: ObservableObject {
         passwordlessInstalled = PrivilegedSetup.isInstalled
         launchesAtLogin = app?.launchesAtLogin ?? false
         dashboardTiles = Settings.shared.dashboardTiles
+        activityStyle = Settings.shared.activityStyle
         dashboardStatus = app?.dashboardStatus ?? DashboardView.Status()
     }
 
@@ -46,6 +48,11 @@ final class SettingsModel: ObservableObject {
     func setDashboardTiles(_ tiles: DashboardView.Tiles) {
         dashboardTiles = tiles  // so the preview updates at once
         later { $0.setDashboardTiles(tiles) }
+    }
+
+    func setActivityStyle(_ style: ActivityStyle) {
+        activityStyle = style
+        later { $0.setActivityStyle(style) }
     }
 
     func togglePasswordlessControl() {
@@ -173,11 +180,18 @@ struct SettingsView: View {
         Section {
             Toggle("Thermal status", isOn: tileBinding(\.thermal))
             Toggle("Claude Code status", isOn: tileBinding(\.claude))
+            Toggle("Claude Code activity", isOn: tileBinding(\.activity))
+            Picker("Activity style", selection: Binding(get: { model.activityStyle }, set: { model.setActivityStyle($0) })) {
+                ForEach(ActivityStyle.allCases) { style in
+                    Text(style.title).tag(style)
+                }
+            }
+            .disabled(!model.dashboardTiles.activity)
             VStack(alignment: .leading, spacing: 6) {
                 Text("Preview")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                DashboardPreview(status: model.dashboardStatus, tiles: model.dashboardTiles)
+                DashboardPreview(status: model.dashboardStatus, tiles: model.dashboardTiles, activityStyle: model.activityStyle)
                     .frame(maxWidth: .infinity)
             }
         } header: {
@@ -211,10 +225,11 @@ struct SettingsView: View {
     }
 }
 
-/// The top of the menu as it will look, on the menu's own background.
+/// The top of the menu as it will look, on the menu's own background, with the activity box animating.
 private struct DashboardPreview: NSViewRepresentable {
     let status: DashboardView.Status
     let tiles: DashboardView.Tiles
+    let activityStyle: ActivityStyle
 
     func makeNSView(context: Context) -> NSVisualEffectView {
         let background = NSVisualEffectView()
@@ -223,21 +238,31 @@ private struct DashboardPreview: NSViewRepresentable {
         background.wantsLayer = true
         background.layer?.cornerRadius = 8
         background.layer?.masksToBounds = true
-        let dashboard = DashboardView()
-        dashboard.autoresizingMask = [.width, .height]
-        background.addSubview(dashboard)
+        background.addSubview(DashboardView())
+        let box = ActivityBoxView(style: activityStyle)
+        background.addSubview(box)
+        box.startPreview()
         return background
     }
 
     func updateNSView(_ background: NSVisualEffectView, context: Context) {
-        guard let dashboard = background.subviews.first as? DashboardView else { return }
+        guard let dashboard = background.subviews.first as? DashboardView,
+              let box = background.subviews.last as? ActivityBoxView else { return }
         dashboard.status = status
         dashboard.tiles = tiles
-        dashboard.frame = background.bounds
+        box.setStyle(activityStyle)
+        box.isHidden = !tiles.activity
+        // The dashboard at the top, the box below it.
+        let width = StatusMenu.width
+        let boxHeight = tiles.activity ? box.design.boxHeight + ActivityBoxView.bottomPadding : 0
+        let dashboardHeight = DashboardView.height(for: tiles)
+        box.frame = CGRect(x: 0, y: 0, width: width, height: boxHeight)
+        dashboard.frame = CGRect(x: 0, y: boxHeight, width: width, height: dashboardHeight)
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSVisualEffectView, context: Context) -> CGSize? {
-        CGSize(width: StatusMenu.width, height: DashboardView.height(for: tiles))
+        let boxHeight = tiles.activity ? activityStyle.boxHeight + ActivityBoxView.bottomPadding : 0
+        return CGSize(width: StatusMenu.width, height: DashboardView.height(for: tiles) + boxHeight)
     }
 }
 
@@ -275,10 +300,11 @@ final class SettingsWindowController: NSWindowController {
         super.init(window: panel)
         fitToContent()
         panel.center()
-        // The dashboard preview's height depends on the tiles shown.
-        tilesObserver = model.$dashboardTiles.removeDuplicates().dropFirst().sink { [weak self] _ in
-            DispatchQueue.main.async { self?.fitToContent() }
-        }
+        // The dashboard preview's height depends on the tiles shown and the activity style.
+        tilesObserver = model.$dashboardTiles.removeDuplicates().combineLatest(model.$activityStyle.removeDuplicates())
+            .dropFirst().sink { [weak self] _ in
+                DispatchQueue.main.async { self?.fitToContent() }
+            }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }

@@ -30,6 +30,11 @@ and restores it on quit, so killing it leaves sleep disabled until the next laun
   - `ClaudeHookInstaller` / `ClaudeTurnMonitor`: the `colchian-hook` script (embedded as a string and
     rewritten at every launch), the hooks in each Claude config dir's `settings.json`, and the marker
     files in `~/Library/Application Support/Colchian/turns/` plus a Darwin notification.
+  - `ClaudeActivity`: reads Claude Code activity (open sessions from `sessions/`, token counts and timing
+    from the transcripts in `projects/` and their `subagents/`) into `ActivitySnapshot`s on a background queue.
+  - `ActivityViews`: the activity box under the dashboard, the detail panel beside the menu, and the
+    `ActivityDesign` protocol. The three designs, chosen in Settings, are `ActivityDragonEye` (the default),
+    `ActivityDragonScales` and `ActivityStream`; they draw in flipped coordinates into bitmaps for the layer.
   - `ThermalMonitor`: thermal state (decides overheating) and temperatures via private IOKit HID APIs
     (display only).
   - `StatusMenu`, `MenuViews`, `Tooltip`, `ModeGuide`, `ModeIllustration`, `MenuBarIcon`, `Drawing`: the

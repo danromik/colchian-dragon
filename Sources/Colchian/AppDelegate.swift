@@ -27,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         thermal.onChange = { [weak self] _ in self?.thermalStateChanged() }
         thermal.start()
         turns.start()
+        if settings.dashboardTiles.activity { ClaudeActivityMonitor.shared.start() }
 
         // Refresh the hook script in case a newer app version changed it.
         if hooksInstalled { try? ClaudeHookInstaller.installScript() }
@@ -227,7 +228,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         stateDidChange()
     }
 
+    func setActivityStyle(_ style: ActivityStyle) {
+        settings.activityStyle = style
+        stateDidChange()
+    }
+
     func setDashboardTiles(_ tiles: DashboardView.Tiles) {
+        if tiles.activity != settings.dashboardTiles.activity {
+            if tiles.activity { ClaudeActivityMonitor.shared.start() } else { ClaudeActivityMonitor.shared.stop() }
+        }
         settings.dashboardTiles = tiles
         stateDidChange()
     }
